@@ -4,21 +4,21 @@ require_relative "../period/index.rb"
 class DebitWallet
   attr_reader :id
   attr_reader :name
-  attr_reader :initialAmount
+  attr_reader :initial_amount
   attr_reader :transactions
   attr_reader :createdAt
 
-  def initialize(id, name, initialAmount = 0, transactions = [], createdAt = DateTime.now)
+  def initialize(id, name, initial_amount = 0, transactions = [], createdAt = DateTime.now)
     @id = id
     @name = name
-    @initialAmount = initialAmount
+    @initial_amount = initial_amount
     @transactions = transactions
     @createdAt = createdAt
   end
 
   def get_revenue(filters = nil)
     revenue_sum = sum_transactions(filter_transactions_by("revenue", filters))
-    return revenue_sum + @initialAmount if filters.nil? || period_contains?(@createdAt, filters)
+    return revenue_sum + @initial_amount if filters.nil? || period_contains?(@createdAt, filters)
     return revenue_sum
   end
 

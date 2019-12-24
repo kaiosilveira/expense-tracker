@@ -1,43 +1,7 @@
 require "minitest/autorun"
+require_relative "./index.rb"
 require_relative "../../builders/transaction/index.rb"
 require_relative "../debit-wallet/index.rb"
-
-# a credit wallet has a limit - ok
-# a credit wallet only accepts unpaid transactions - ok
-# a credit wallet have to be paid with a debit wallet
-# a credit wallet may accept partial payments
-# a credit wallet does not accept fixed payments
-
-class CreditWallet
-  attr_reader :id
-  attr_reader :name
-  attr_reader :limit
-  attr_reader :transactions
-
-  def initialize(id = nil, name = "", limit = 0.0, transactions = [])
-    @id = id
-    @name = name
-    @limit = limit
-    @transactions = transactions
-  end
-
-  def add_transaction(transaction)
-    raise "Credit transactions cannot be already paid" if transaction.paid
-    @transactions << transaction
-  end
-
-  def get_total_debit
-    @transactions.inject(0) { |sum, t| sum + t.amount }
-  end
-
-  def add_payment!(amount, wallet)
-    transaction = TransactionBuilder.new.withAmount(amount).build()
-    wallet.add_transaction(transaction)
-    @transactions.each { |t|
-      t.paid = true
-    }
-  end
-end
 
 describe CreditWallet do
   describe "initialize" do
@@ -96,7 +60,18 @@ describe CreditWallet do
     it "should raise an exception if transaction is paid" do
       transaction = TransactionBuilder.new.paid(true).withAmount(10.0).build()
       wallet = CreditWallet.new(id = nil, name = "My Wallet", limit = 1000.0)
-      msg = "Credit transactions cannot be already paid"
+      msg = "Credit transactions cannot be already paid."
+      error = assert_raises(Exception) {
+        wallet.add_transaction(transaction)
+      }
+
+      assert_equal(error.message, msg)
+    end
+
+    it "should raise an exception if transation if fixed" do
+      transaction = TransactionBuilder.new.isFixed(true).withAmount(10.0).build()
+      wallet = CreditWallet.new(id = nil, name = "My Wallet", limit = 1000.0)
+      msg = "Credit transactions cannot be fixed."
       error = assert_raises(Exception) {
         wallet.add_transaction(transaction)
       }
@@ -120,11 +95,20 @@ describe CreditWallet do
       debit = wallet.get_total_debit()
       assert_equal(debit, transaction.amount)
     end
+
+    it "should sum only the unpaid transactions" do
+      transaction1 = TransactionBuilder.new.withAmount(100.00).build()
+      transaction2 = TransactionBuilder.new.paid(true).withAmount(100.00).build()
+      transactions = [transaction1, transaction2]
+      wallet = CreditWallet.new(id = nil, name = "Credit Wallet", limit = 200.00, transactions)
+      debit = wallet.get_total_debit()
+      assert_equal(transaction1.amount, debit)
+    end
   end
 
   describe "add_payment" do
     it "should process the payment and add an expense transaction into the debit wallet" do
-      debit_wallet = DebitWallet.new(id = nil, name = "Debit Wallet", initialAmount = 100.0)
+      debit_wallet = DebitWallet.new(id = nil, name = "Debit Wallet", initial_amount = 100.0)
       credit_transactions = [TransactionBuilder.new.withAmount(100.0).build()]
       credit_wallet = CreditWallet.new(
         id = nil,
@@ -133,8 +117,32 @@ describe CreditWallet do
         credit_transactions
       )
 
-      paymentAmount = credit_wallet.get_total_debit()
-      credit_wallet.add_payment!(paymentAmount, debit_wallet)
+      fullPaymentAmount = credit_wallet.get_total_debit()
+      credit_wallet.add_payment(fullPaymentAmount, debit_wallet)
+
+      assert_equal(debit_wallet.transactions.length, 1)
+      assert_equal(debit_wallet.transactions.first.amount, fullPaymentAmount)
+      assert_equal(credit_wallet.get_total_debit(), 0)
+    end
+
+    it "should charge only the remaining debit if the given payment amount is greater than the remaining amount" do
+      debit_wallet = DebitWallet.new(
+        id = nil,
+        name = "Debit Wallet",
+        initial_amount = 100
+      )
+
+      transaction = TransactionBuilder.new.withAmount(75.00).withType("expense").build()
+      transactions = [transaction]
+      credit_wallet = CreditWallet.new(id = nil, name = "Credit Wallet", limit = 100.00, transactions)
+      total_debit = credit_wallet.get_total_debit()
+
+      credit_wallet.add_payment(total_debit, debit_wallet)
+
+      assert_equal(debit_wallet.transactions.length, 1)
+      assert_equal(total_debit, debit_wallet.transactions.first().amount)
+      assert_equal(credit_wallet.get_total_debit(), 0)
+      assert_equal(debit_wallet.initial_amount - total_debit, debit_wallet.get_balance())
     end
   end
 end
