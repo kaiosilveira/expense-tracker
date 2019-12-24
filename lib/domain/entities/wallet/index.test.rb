@@ -2,6 +2,7 @@ require "minitest/autorun"
 require "date"
 require_relative "./index.rb"
 require_relative "../transaction/index.rb"
+require_relative "../../builders/transaction/index.rb"
 
 describe Wallet do
   describe "initialize" do
@@ -30,7 +31,7 @@ describe Wallet do
   end
 
   describe "get_revenue" do
-    it "should sum up the total revenue of the wallet" do
+    it "should sum up the total revenue of the wallet if no filters were passed in" do
       initialAmount = 50
 
       transaction1 = Transaction.new
@@ -51,6 +52,76 @@ describe Wallet do
                      sum + t.amount
                    } + initialAmount, wallet.get_revenue
     end
+
+    it "should sum up the total revenue of a given month" do
+      initialAmount = 30.0
+      month = 12
+      year = 2019
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 1))
+        .withType("revenue")
+        .build
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 3))
+        .withType("revenue")
+        .build
+
+      transaction3 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 11, 1))
+        .withType("revenue")
+        .build
+
+      transactions = [transaction1, transaction2, transaction3]
+      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
+      assert_equal (initialAmount + transaction1.amount + transaction2.amount), wallet.get_revenue(TransactionPeriod.new(month, year))
+    end
+
+    it "should sum up the total revenue of a given range" do
+      initialAmount = 30.0
+
+      from = TransactionPeriod.new(11, 2019)
+      to = TransactionPeriod.new(12, 2019)
+
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 1))
+        .withType("revenue")
+        .build
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 3))
+        .withType("revenue")
+        .build
+
+      transaction3 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 11, 1))
+        .withType("revenue")
+        .build
+
+      transaction4 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 10, 1))
+        .withType("revenue")
+        .build
+
+      transactions = [transaction1, transaction2, transaction3, transaction4]
+      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
+
+      assert_equal (initialAmount + transaction1.amount + transaction2.amount + transaction3.amount), wallet.get_revenue([from, to])
+    end
   end
 
   describe "get_expenses" do
@@ -69,7 +140,7 @@ describe Wallet do
 
       wallet = Wallet.new(1, "My Wallet", 0, transactions)
 
-      assert_equal -1 * transactions.select { |t|
+      assert_equal (-1) * transactions.select { |t|
                      t.paid == true && t.type = "expense"
                    }.inject(0) { |sum, t|
                      sum + t.amount

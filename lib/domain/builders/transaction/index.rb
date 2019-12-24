@@ -1,14 +1,14 @@
 require_relative "../../entities/transaction/index.rb"
 
 class TransactionBuilder
-  :transaction
+  attr_reader :transaction
 
   def initialize
     @transaction = Transaction.new
     @transaction.amount = 0.0
     @transaction.currency = "BRL"
     @transaction.description = "others"
-    @transaction.date = DateTime.new
+    @transaction.date = DateTime.now
     @transaction.paid = false
     @transaction.category = "others"
   end

@@ -1,4 +1,5 @@
 require "minitest/autorun"
+require "date"
 require_relative "./index.rb"
 require_relative "../../entities/transaction/index.rb"
 
@@ -8,7 +9,7 @@ describe TransactionBuilder do
     assert_equal 0.0, transaction.amount
     assert_equal "BRL", transaction.currency
     assert_equal "others", transaction.description
-    assert_equal DateTime.new, transaction.date
+    assert_kind_of DateTime, transaction.date
     assert_equal false, transaction.paid
     assert_equal "others", transaction.category
   end
