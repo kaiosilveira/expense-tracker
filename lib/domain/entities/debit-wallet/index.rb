@@ -1,11 +1,11 @@
 require "date"
 require_relative "../period/index.rb"
 
-class Wallet
-  attr_accessor :id
-  attr_accessor :name
-  attr_accessor :initialAmount
-  attr_accessor :transactions
+class DebitWallet
+  attr_reader :id
+  attr_reader :name
+  attr_reader :initialAmount
+  attr_reader :transactions
   attr_reader :createdAt
 
   def initialize(id, name, initialAmount = 0, transactions = [], createdAt = DateTime.now)
@@ -18,16 +18,20 @@ class Wallet
 
   def get_revenue(filters = nil)
     revenue_sum = sum_transactions(filter_transactions_by("revenue", filters))
-    return filters.nil? ||
-             period_contains?(@createdAt, filters) ? revenue_sum + @initialAmount : revenue_sum
+    return revenue_sum + @initialAmount if filters.nil? || period_contains?(@createdAt, filters)
+    return revenue_sum
   end
 
-  def get_expenses
-    -1 * sum_transactions(filter_transactions_by("expense"))
+  def get_expenses(filters = nil)
+    return -1 * sum_transactions(filter_transactions_by("expense", filters))
   end
 
   def get_balance
     self.get_revenue + self.get_expenses
+  end
+
+  def add_transaction(transaction)
+    @transactions << transaction
   end
 
   private

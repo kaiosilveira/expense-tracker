@@ -35,31 +35,43 @@ describe TransactionBuilder do
   it "should apply date" do
     date = DateTime.now
     transaction = TransactionBuilder.new.withDate(date).build
-    assert_equal transaction.date, date
+    assert_equal(transaction.date, date)
   end
 
   it "should apply paid value" do
     paid = false
     transaction = TransactionBuilder.new.paid(paid).build
-    assert_equal transaction.paid, paid
+    assert_equal(transaction.paid, paid)
   end
 
   it "should apply wallet id" do
     walletId = 1
     transaction = TransactionBuilder.new.withWalletId(walletId).build
-    assert_equal transaction.walletId, walletId
+    assert_equal(transaction.walletId, walletId)
   end
 
   it "should apply transaction category" do
     category = "lunches"
     transaction = TransactionBuilder.new.withCategory(category).build
-    assert_equal transaction.category, category
+    assert_equal(transaction.category, category)
   end
 
   it "should apply transaction type" do
     type = "expense"
     transaction = TransactionBuilder.new.withType(type).build
-    assert_equal transaction.type, type
+    assert_equal(transaction.type, type)
+  end
+
+  it "should apply installments" do
+    installments = 3
+    transaction = TransactionBuilder.new.withInstallments(installments).build()
+    assert_equal(transaction.installments, installments)
+  end
+
+  it "should apply isFixed" do
+    fixed = true
+    transaction = TransactionBuilder.new.isFixed(fixed).build()
+    assert_equal(transaction.isFixed, fixed)
   end
 
   it "should build a full instance" do
@@ -81,15 +93,15 @@ describe TransactionBuilder do
       .withWalletId(walletId)
       .withCategory(category)
       .withType(type)
-      .build
+      .build()
 
-    assert_equal transaction.amount, amount
-    assert_equal transaction.currency, currency
-    assert_equal transaction.description, description
-    assert_equal transaction.date, date
-    assert_equal transaction.paid, paid
-    assert_equal transaction.walletId, walletId
-    assert_equal transaction.category, category
-    assert_equal transaction.type, type
+    assert_equal(transaction.amount, amount)
+    assert_equal(transaction.currency, currency)
+    assert_equal(transaction.description, description)
+    assert_equal(transaction.date, date)
+    assert_equal(transaction.paid, paid)
+    assert_equal(transaction.walletId, walletId)
+    assert_equal(transaction.category, category)
+    assert_equal(transaction.type, type)
   end
 end

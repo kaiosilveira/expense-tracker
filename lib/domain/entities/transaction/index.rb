@@ -7,4 +7,6 @@ class Transaction
   attr_accessor :walletId
   attr_accessor :category
   attr_accessor :type
+  attr_accessor :installments
+  attr_accessor :isFixed
 end

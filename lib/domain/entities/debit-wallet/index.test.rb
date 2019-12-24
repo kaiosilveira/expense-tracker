@@ -5,17 +5,18 @@ require_relative "../transaction/index.rb"
 require_relative "../period/index.rb"
 require_relative "../../builders/transaction/index.rb"
 
-describe Wallet do
+describe DebitWallet do
   describe "initialize" do
     it "should instantiate transactions as an empty array as default" do
       id = 1
       name = "Carteira"
       initialAmount = 100.00
-      wallet = Wallet.new(id, name, initialAmount)
-      _(wallet.id).must_equal id
-      _(wallet.name).must_equal name
-      _(wallet.initialAmount).must_equal initialAmount
-      _(wallet.transactions).must_equal []
+      wallet = DebitWallet.new(id, name, initialAmount)
+
+      assert_equal(id, wallet.id)
+      assert_equal(name, wallet.name)
+      assert_equal(initialAmount, wallet.initialAmount)
+      assert_equal([], wallet.transactions)
     end
 
     it "should instantiate a full instance" do
@@ -23,11 +24,12 @@ describe Wallet do
       name = "Carteira"
       initialAmount = 100.00
       transactions = []
-      wallet = Wallet.new(id, name, initialAmount, transactions)
-      _(wallet.id).must_equal id
-      _(wallet.name).must_equal name
-      _(wallet.initialAmount).must_equal initialAmount
-      _(wallet.transactions).must_equal transactions
+      wallet = DebitWallet.new(id, name, initialAmount, transactions)
+
+      assert_equal(id, wallet.id)
+      assert_equal(name, wallet.name)
+      assert_equal(initialAmount, wallet.initialAmount)
+      assert_equal(transactions, wallet.transactions)
     end
   end
 
@@ -46,7 +48,7 @@ describe Wallet do
       transaction2.type = "revenue"
 
       transactions = [transaction1, transaction2]
-      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
+      wallet = DebitWallet.new(1, "My Wallet", initialAmount, transactions)
       assert_equal transactions.select { |t|
                      t.paid == true && t.type = "revenue"
                    }.inject(0) { |sum, t|
@@ -82,8 +84,11 @@ describe Wallet do
         .build
 
       transactions = [transaction1, transaction2, transaction3]
-      wallet = Wallet.new(1, "My Wallet", 0.0, transactions, walletCreationDate)
-      assert_equal (transaction1.amount + transaction2.amount), wallet.get_revenue(Period.new(month, year))
+      wallet = DebitWallet.new(1, "My Wallet", 0.0, transactions, walletCreationDate)
+      assert_equal(
+        (transaction1.amount + transaction2.amount),
+        wallet.get_revenue(Period.new(month, year))
+      )
     end
 
     it "should sum up the total revenue of a given range" do
@@ -122,9 +127,12 @@ describe Wallet do
         .build
 
       transactions = [transaction1, transaction2, transaction3, transaction4]
-      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions, walletCreationDate)
+      wallet = DebitWallet.new(1, "My Wallet", initialAmount, transactions, walletCreationDate)
 
-      assert_equal (initialAmount + transaction1.amount + transaction2.amount + transaction3.amount), wallet.get_revenue([from, to])
+      assert_equal(
+        (initialAmount + transaction1.amount + transaction2.amount + transaction3.amount),
+        wallet.get_revenue([from, to])
+      )
     end
 
     it "should apply wallet initialAmount in the sum just if wallet creation date is at the given period" do
@@ -149,8 +157,8 @@ describe Wallet do
 
       transactions = [transaction1, transaction2]
 
-      wallet1 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
-      wallet2 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
+      wallet1 = DebitWallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
+      wallet2 = DebitWallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
 
       assert_equal(
         (transaction1.amount + transaction2.amount), wallet1.get_revenue(period)
@@ -185,8 +193,8 @@ describe Wallet do
 
       transactions = [transaction1, transaction2]
 
-      wallet1 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
-      wallet2 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
+      wallet1 = DebitWallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
+      wallet2 = DebitWallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
 
       assert_equal(
         (transaction1.amount + transaction2.amount),
@@ -200,7 +208,7 @@ describe Wallet do
   end
 
   describe "get_expenses" do
-    it "should sum up all expenses" do
+    it "should sum up all expenses if no filter was passed in" do
       transaction1 = Transaction.new
       transaction1.amount = 50
       transaction1.paid = true
@@ -213,13 +221,91 @@ describe Wallet do
 
       transactions = [transaction1, transaction2]
 
-      wallet = Wallet.new(1, "My Wallet", 0, transactions)
+      wallet = DebitWallet.new(1, "My Wallet", 0, transactions)
 
       assert_equal (-1) * transactions.select { |t|
                      t.paid == true && t.type = "expense"
                    }.inject(0) { |sum, t|
                      sum + t.amount
                    }, wallet.get_expenses
+    end
+
+    it "should sum up the total of expenses for a given month" do
+      walletCreationDate = DateTime.new(2019, 12, 1)
+
+      month = 12
+      year = 2019
+
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 1))
+        .withType("expense")
+        .build
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 3))
+        .withType("expense")
+        .build
+
+      transaction3 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 11, 1))
+        .withType("expense")
+        .build
+
+      transactions = [transaction1, transaction2, transaction3]
+      wallet = DebitWallet.new(1, "My Wallet", 0.0, transactions, walletCreationDate)
+      assert_equal(
+        (transaction1.amount + transaction2.amount) * -1,
+        wallet.get_expenses(Period.new(month, year))
+      )
+    end
+
+    it "should sum up the total of expenses for a given range" do
+      walletCreationDate = DateTime.new(2019, 11, 1)
+
+      from = Period.new(11, 2019)
+      to = Period.new(12, 2019)
+
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 1))
+        .withType("expense")
+        .build
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 12, 3))
+        .withType("expense")
+        .build
+
+      transaction3 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 11, 1))
+        .withType("expense")
+        .build
+
+      transaction4 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(50.00)
+        .withDate(DateTime.new(2019, 10, 1))
+        .withType("expense")
+        .build
+
+      transactions = [transaction1, transaction2, transaction3, transaction4]
+      wallet = DebitWallet.new(1, "My Wallet", 0.0, transactions, walletCreationDate)
+
+      assert_equal(
+        (transaction1.amount + transaction2.amount + transaction3.amount) * -1,
+        wallet.get_expenses([from, to])
+      )
     end
   end
 
@@ -244,9 +330,18 @@ describe Wallet do
 
       transactions = [expense1, expense2, revenue]
 
-      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
+      wallet = DebitWallet.new(1, "My Wallet", initialAmount, transactions)
 
       assert_equal initialAmount + revenue.amount - expense1.amount - expense2.amount, wallet.get_balance
+    end
+  end
+
+  describe "add_transaction" do
+    it "should add a transaction to the wallet" do
+      wallet = DebitWallet.new(nil, "My Wallet")
+      transaction = TransactionBuilder.new.paid(true).withAmount(10.0).build()
+      wallet.add_transaction(transaction)
+      assert_equal(wallet.transactions.length, 1)
     end
   end
 end

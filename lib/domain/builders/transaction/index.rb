@@ -37,8 +37,8 @@ class TransactionBuilder
     self
   end
 
-  def paid(p)
-    @transaction.paid = p
+  def paid(paid)
+    @transaction.paid = paid
     self
   end
 
@@ -54,6 +54,16 @@ class TransactionBuilder
 
   def withType(t)
     @transaction.type = t
+    self
+  end
+
+  def withInstallments(i)
+    @transaction.installments = i
+    self
+  end
+
+  def isFixed(fixed)
+    @transaction.isFixed = fixed
     self
   end
 end
