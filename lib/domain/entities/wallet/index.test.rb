@@ -2,6 +2,7 @@ require "minitest/autorun"
 require "date"
 require_relative "./index.rb"
 require_relative "../transaction/index.rb"
+require_relative "../period/index.rb"
 require_relative "../../builders/transaction/index.rb"
 
 describe Wallet do
@@ -54,9 +55,11 @@ describe Wallet do
     end
 
     it "should sum up the total revenue of a given month" do
-      initialAmount = 30.0
+      walletCreationDate = DateTime.new(2019, 12, 1)
+
       month = 12
       year = 2019
+
       transaction1 = TransactionBuilder.new
         .paid(true)
         .withAmount(50.00)
@@ -79,15 +82,16 @@ describe Wallet do
         .build
 
       transactions = [transaction1, transaction2, transaction3]
-      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
-      assert_equal (initialAmount + transaction1.amount + transaction2.amount), wallet.get_revenue(TransactionPeriod.new(month, year))
+      wallet = Wallet.new(1, "My Wallet", 0.0, transactions, walletCreationDate)
+      assert_equal (transaction1.amount + transaction2.amount), wallet.get_revenue(Period.new(month, year))
     end
 
     it "should sum up the total revenue of a given range" do
       initialAmount = 30.0
+      walletCreationDate = DateTime.new(2019, 11, 1)
 
-      from = TransactionPeriod.new(11, 2019)
-      to = TransactionPeriod.new(12, 2019)
+      from = Period.new(11, 2019)
+      to = Period.new(12, 2019)
 
       transaction1 = TransactionBuilder.new
         .paid(true)
@@ -118,9 +122,80 @@ describe Wallet do
         .build
 
       transactions = [transaction1, transaction2, transaction3, transaction4]
-      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions)
+      wallet = Wallet.new(1, "My Wallet", initialAmount, transactions, walletCreationDate)
 
       assert_equal (initialAmount + transaction1.amount + transaction2.amount + transaction3.amount), wallet.get_revenue([from, to])
+    end
+
+    it "should apply wallet initialAmount in the sum just if wallet creation date is at the given period" do
+      initialAmount = 30.0
+      period = Period.new(10, 2019)
+      wallet1CreationDate = DateTime.new(2019, 9)
+      wallet2CreationDate = DateTime.new(period.year, period.month)
+
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(10.0)
+        .withType("revenue")
+        .withDate(DateTime.new(period.year, period.month))
+        .build()
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(10.0)
+        .withType("revenue")
+        .withDate(DateTime.new(period.year, period.month))
+        .build()
+
+      transactions = [transaction1, transaction2]
+
+      wallet1 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
+      wallet2 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
+
+      assert_equal(
+        (transaction1.amount + transaction2.amount), wallet1.get_revenue(period)
+      )
+      assert_equal(
+        (initialAmount + transaction1.amount + transaction2.amount),
+        wallet2.get_revenue(period)
+      )
+    end
+
+    it "should apply wallet initialAmount in the sum just if wallet creation date is inside the given range" do
+      initialAmount = 30.0
+      wallet1CreationDate = DateTime.new(2019, 9)
+      wallet2CreationDate = DateTime.new(2019, 10)
+
+      from = Period.new(10, 2019)
+      to = Period.new(11, 2019)
+
+      transaction1 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(10.0)
+        .withType("revenue")
+        .withDate(DateTime.new(2019, 11))
+        .build()
+
+      transaction2 = TransactionBuilder.new
+        .paid(true)
+        .withAmount(10.0)
+        .withType("revenue")
+        .withDate(DateTime.new(2019, 10))
+        .build()
+
+      transactions = [transaction1, transaction2]
+
+      wallet1 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet1CreationDate)
+      wallet2 = Wallet.new(nil, "My Wallet", initialAmount, transactions, wallet2CreationDate)
+
+      assert_equal(
+        (transaction1.amount + transaction2.amount),
+        wallet1.get_revenue([from, to])
+      )
+      assert_equal(
+        (initialAmount + transaction1.amount + transaction2.amount),
+        wallet2.get_revenue([from, to])
+      )
     end
   end
 
